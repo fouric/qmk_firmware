@@ -1,3 +1,27 @@
+# Gector's Comments
+
+## Compiling 
+Run the command `qmk compile -kb dactylM_fouric -km default` to compile the keyboard normally. This places a hex file in the main directory, which you can upload to the teensy with "teensy loader". Teensy loader is availble from https://www.pjrc.com/teensy/loader.html
+
+The "teensy_loader_cli" executable is included in this repository and typical use looks like:
+
+`sudo ./teensy_loader_cli --mcu=atmega32u4 -w dactylM_fouric_default.hex   -v`
+
+
+## Other
+You should be able to install qmk's commands by running `python3 -m pip install --user qmk`.
+
+Take a look at https://beta.docs.qmk.fm/tutorial/newbs_getting_started for information on qmk, the docs are extensive but can be difficult to navigate. I recomend looking at https://beta.docs.qmk.fm/developing-qmk/for-a-deeper-understanding/understanding_qmk and other parts of the "Developing QMK" section for an understanding of how QMK works.
+
+## Changes Made
+I created the keyboard called "dactylM_fouric", as in, "dactyl manuform - fouric", and based most of the code off of the ergodox_ez which is largely based off of modified internal programs of qmk itself. QMK expects to see a few different functions in the keyboard specific files, but you can add additional source files for your own functionality if you wish. In my case, I overrode the default `matrix.c` file located in the `quantum` directory, and made it work with I2C (built in to QMK for the most part) to communicate with an MCP23018.
+
+The code initializes and then monitors both halves of the keyboard. By default, all columns are tied high with an internal pull-up resistor both in the Teensy 2.0 and the MCP23018 I/O expander. Rows are pulled low from Row 0 to Row 'n', and closed switches connect a column to a row. When a column is pulled low, it means that a switch on that column is both closed and that row is being pulled low by the firmware. The firmware keeps track of which row it is on and modify's an internal represenation of the key matrix created by a 2 dimensional array of 1's and 0's. 
+
+## Editing The Keymap
+Most edits for changing keys are made in `keymap.c` of `keyboards/dactylM_fouric/keymaps/`. See https://beta.docs.qmk.fm/using-qmk/simple-keycodes/keycodes for a list of availble keycodes. 
+
+
 # Quantum Mechanical Keyboard Firmware
 
 [![Current Version](https://img.shields.io/github/tag/qmk/qmk_firmware.svg)](https://github.com/qmk/qmk_firmware/tags)
