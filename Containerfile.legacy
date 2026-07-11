@@ -1,0 +1,72 @@
+# Legacy toolchain image for this ~2020-era QMK checkout.
+# Separate from Containerfile (qmk-dactylm-2020).
+#
+# Why a second image?
+# - Native gcc/g++ 7.5 (Ubuntu 18.04) matches what this code was written against.
+# - Newer compilers (gcc 9+, especially 11+/15+) reject patterns in
+#   quantum/serial_link/protocol/transport.h, so `make test` fails there.
+# - avr-gcc 5.4.0 from Ubuntu 18.04 matches the AVR toolchain of that era.
+#
+# Build:
+#   podman build -t qmk-dactylm-legacy -f Containerfile.legacy .
+#
+# Run unit tests (all 6 suites / 78 gtest cases):
+#   podman run --rm -it -v "$PWD:/qmk_firmware:z" \
+#     qmk-dactylm-legacy make test
+#
+# Build firmware (same as the main image):
+#   podman run --rm -it -v "$PWD:/qmk_firmware:z" \
+#     qmk-dactylm-legacy make dactylM_fouric:default
+#
+# Flash:
+#   podman run --rm -it -v "$PWD:/qmk_firmware:z" \
+#     --device /dev/bus/usb \
+#     qmk-dactylm-legacy make dactylM_fouric:default:flash
+
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
+
+# Pin the era: Ubuntu 18.04 ships gcc/g++ 7.5 and avr-gcc 5.4.0
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        avr-libc \
+        binutils-avr \
+        build-essential \
+        ca-certificates \
+        dfu-programmer \
+        dfu-util \
+        gcc-avr \
+        git \
+        libusb-dev \
+        make \
+        python3 \
+        python3-pip \
+        python3-setuptools \
+        python3-venv \
+        unzip \
+        usbutils \
+        wget \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY util/flash_teensy.sh /usr/local/bin/flash-teensy
+RUN chmod 0755 /usr/local/bin/flash-teensy
+
+RUN git clone --depth 1 https://github.com/PaulStoffregen/teensy_loader_cli.git /tmp/teensy_loader_cli \
+    && cd /tmp/teensy_loader_cli \
+    && make \
+    && install -m 0755 teensy_loader_cli /usr/local/bin/teensy_loader_cli \
+    && rm -rf /tmp/teensy_loader_cli
+
+RUN python3 -m venv /opt/qmk-venv
+ENV PATH="/opt/qmk-venv/bin:${PATH}"
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /qmk_firmware
+VOLUME ["/qmk_firmware"]
+
+CMD ["sh", "-c", "echo 'Legacy image: gcc 7.5 + avr-gcc 5.4.0 (Ubuntu 18.04)' && echo 'Mount: -v \"$PWD:/qmk_firmware:z\"' && echo 'Tests:  podman run --rm -v \"$PWD:/qmk_firmware:z\" qmk-dactylm-legacy make test' && exec bash"]
